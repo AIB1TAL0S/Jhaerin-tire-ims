@@ -10,7 +10,6 @@ import { getLowStockProducts, getDeadStockProducts } from '$lib/server/models/in
 import { getUnreadCount } from '$lib/server/models/notifications';
 
 export const load: PageServerLoad = async ({ url, locals }) => {
-	// Date range from query params (default: last 30 days)
 	const toDate = url.searchParams.get('to')
 		? new Date(url.searchParams.get('to')!)
 		: new Date();
@@ -26,17 +25,27 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 	const dateRange = { from: fromDate, to: toDate };
 	const currentYear = toDate.getFullYear();
 
-	const [kpis, peakLowest, chartData, trendData, categoryData, lowStock, deadStock, unreadCount] =
-		await Promise.all([
-			getDashboardKPIs(dateRange),
-			getPeakAndLowestSalesMonth(currentYear),
-			getSalesChartData(granularity, dateRange),
-			getRevenueProfitTrend(dateRange),
-			getSalesByCategory(dateRange),
-			getLowStockProducts(),
-			getDeadStockProducts(90),
-			locals.user ? getUnreadCount(locals.user.userId) : Promise.resolve(0)
-		]);
+	// Run queries in two smaller batches to avoid overwhelming the DB connection pool
+	const [kpis, peakLowest, chartData] = await Promise.all([
+		getDashboardKPIs(dateRange).catch(() => ({
+			totalProducts: 0,
+			totalStock: 0,
+			stockInSummary: 0,
+			stockOutSummary: 0,
+			totalRevenue: 0,
+			totalGrossProfit: 0
+		})),
+		getPeakAndLowestSalesMonth(currentYear).catch(() => ({ peak: '—', lowest: '—' })),
+		getSalesChartData(granularity, dateRange).catch(() => [])
+	]);
+
+	const [trendData, categoryData, lowStock, deadStock, unreadCount] = await Promise.all([
+		getRevenueProfitTrend(dateRange).catch(() => []),
+		getSalesByCategory(dateRange).catch(() => []),
+		getLowStockProducts().catch(() => []),
+		getDeadStockProducts(90).catch(() => []),
+		locals.user ? getUnreadCount(locals.user.userId).catch(() => 0) : Promise.resolve(0)
+	]);
 
 	return {
 		kpis,

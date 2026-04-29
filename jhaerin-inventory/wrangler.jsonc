@@ -37,9 +37,10 @@
 	 * https://developers.cloudflare.com/workers/configuration/secrets/
 	 */
 	"vars": {
-		"SUPABASE_URL": "placeholder",
-		"SUPABASE_ANON_KEY": "placeholder",
-		"SUPABASE_SERVICE_ROLE_KEY": "placeholder"
+		"DATABASE_URL": "postgresql://postgres.bkpekjehuljmqjzcwtol:5%228D%26~kL%23Qx2%26X-@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres",
+		"SUPABASE_URL": "https://bkpekjehuljmqjzcwtol.supabase.co",
+		"SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrcGVramVodWxqbXFqemN3dG9sIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc0NTc4NTcsImV4cCI6MjA5MzAzMzg1N30.sGJNLXvaWED2AI9x5TfMkWsGN7MUge8DJ7FQqL1G7ZQ",
+		"SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJrcGVramVodWxqbXFqemN3dG9sIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NzQ1Nzg1NywiZXhwIjoyMDkzMDMzODU3fQ.dmDp_x6jg4zRo1PP7IJ-L6d4d_tACSPi8lWgN8k0X2k"
 	}
 	/**
 	 * Service Bindings (communicate between multiple Workers)

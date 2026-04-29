@@ -8,8 +8,8 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	}
 
 	const [unreadCount, notifications] = await Promise.all([
-		getUnreadCount(locals.user.userId),
-		getNotifications(locals.user.userId, { limit: 20 })
+		getUnreadCount(locals.user.userId).catch(() => 0),
+		getNotifications(locals.user.userId, { limit: 20 }).catch(() => [])
 	]);
 
 	return {

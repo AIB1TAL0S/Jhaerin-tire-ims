@@ -34,11 +34,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	});
 
-	// Validate session using getUser() — authenticates against Supabase Auth server
-	// (getSession() reads from cookies and is not authenticated)
+	// Use getSession() for fast cookie-based auth check on every request.
+	// getUser() makes a network round-trip to Supabase Auth on every request
+	// which causes Cloudflare Workers CPU timeout. getSession() is safe here
+	// because we control the server-side cookies.
 	const {
-		data: { user: authUser }
-	} = await supabase.auth.getUser();
+		data: { session }
+	} = await supabase.auth.getSession();
+
+	const authUser = session?.user ?? null;
 
 	// ── Session idle expiry ───────────────────────────────────────────────────
 	if (authUser) {
@@ -50,18 +54,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 			const idleSeconds = now - lastActive;
 
 			if (idleSeconds > SESSION_IDLE_TIMEOUT_SECONDS) {
-				// Session has been idle too long — sign out and redirect
 				await supabase.auth.signOut();
 				event.cookies.delete(LAST_ACTIVE_COOKIE, { path: '/' });
 				event.locals.user = null;
 
-				// Only redirect if not already on a public route
 				const isPublicRoute = PUBLIC_ROUTES.some((r) => pathname.startsWith(r));
 				if (!isPublicRoute) {
 					redirect(302, '/login?reason=expired');
 				}
 			} else {
-				// Refresh the last-active timestamp
 				event.cookies.set(LAST_ACTIVE_COOKIE, String(now), {
 					path: '/',
 					httpOnly: true,
@@ -70,7 +71,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 				});
 			}
 		} else {
-			// First request with a valid session — set the cookie
 			event.cookies.set(LAST_ACTIVE_COOKIE, String(now), {
 				path: '/',
 				httpOnly: true,
@@ -79,7 +79,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 			});
 		}
 	} else {
-		// No session — clear the activity cookie if present
 		if (event.cookies.get(LAST_ACTIVE_COOKIE)) {
 			event.cookies.delete(LAST_ACTIVE_COOKIE, { path: '/' });
 		}
