@@ -9,7 +9,11 @@
 	let { data }: { data: PageData } = $props();
 
 	// ── Tab state ────────────────────────────────────────────────────────────
-	let activeTab = $state(data.tab);
+	let activeTab = $state('in');
+
+	$effect(() => {
+		activeTab = data.tab;
+	});
 
 	function setTab(tab: string) {
 		activeTab = tab;

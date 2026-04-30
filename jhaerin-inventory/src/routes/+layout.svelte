@@ -10,8 +10,14 @@
 
 	// ── Notification modal ───────────────────────────────────────────────────
 	let notifOpen = $state(false);
-	let localNotifications = $state(data.notifications ?? []);
-	let localUnreadCount = $state(data.unreadCount ?? 0);
+	let localNotifications = $state<typeof data.notifications>([]);
+	let localUnreadCount = $state(0);
+
+	// Sync local state when data changes (e.g. on navigation/reload)
+	$effect(() => {
+		localNotifications = data.notifications ?? [];
+		localUnreadCount = data.unreadCount ?? 0;
+	});
 
 	async function handleMarkRead(id: string) {
 		const formData = new FormData();

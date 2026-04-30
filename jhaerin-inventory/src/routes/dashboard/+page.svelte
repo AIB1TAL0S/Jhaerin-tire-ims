@@ -10,8 +10,13 @@
 	let { data }: { data: PageData } = $props();
 
 	// ── Date range & granularity filters ─────────────────────────────────────
-	let fromFilter = $state(data.from);
-	let toFilter = $state(data.to);
+	let fromFilter = $state('');
+	let toFilter = $state('');
+
+	$effect(() => {
+		fromFilter = data.from;
+		toFilter = data.to;
+	});
 
 	function applyDateRange() {
 		const url = new URL($page.url);

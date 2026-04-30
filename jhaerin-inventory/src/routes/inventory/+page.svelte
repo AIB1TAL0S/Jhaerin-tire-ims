@@ -25,10 +25,16 @@
 	}
 
 	// ── Search & filters ─────────────────────────────────────────────────────
-	let searchValue = $state(data.search);
-	let providerFilter = $state(data.deliveryProvider);
-	let lowStockFilter = $state(data.lowStockOnly);
+	let searchValue = $state('');
+	let providerFilter = $state('');
+	let lowStockFilter = $state(false);
 	let searchTimeout: ReturnType<typeof setTimeout>;
+
+	$effect(() => {
+		searchValue = data.search;
+		providerFilter = data.deliveryProvider;
+		lowStockFilter = data.lowStockOnly;
+	});
 
 	function handleSearch() {
 		clearTimeout(searchTimeout);

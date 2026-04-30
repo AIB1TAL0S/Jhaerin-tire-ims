@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-cloudflare';
+import adapter from '@sveltejs/adapter-vercel';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
@@ -7,7 +7,10 @@ const config = {
 		runes: ({ filename }) => (filename.split(/[/\\]/).includes('node_modules') ? undefined : true)
 	},
 	kit: {
-		adapter: adapter(),
+		adapter: adapter({
+			// Explicitly target Node 22 (LTS) for Vercel deployment
+			runtime: 'nodejs22.x'
+		}),
 		typescript: {
 			config: (config) => ({
 				...config,
