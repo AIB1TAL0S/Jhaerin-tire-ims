@@ -2,6 +2,7 @@
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4Client as zodClient } from 'sveltekit-superforms/adapters';
 	import { registerSchema } from '$lib/schemas/auth';
+	import ThemeToggle from '$lib/components/ThemeToggle.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -16,7 +17,11 @@
 	<title>Create Account — Jhaerin Tire Supply</title>
 </svelte:head>
 
-<div class="bg-background flex min-h-screen items-center justify-center px-4 py-12">
+<div class="bg-background relative flex min-h-screen items-center justify-center px-4 py-12">
+	<!-- Theme toggle — top right -->
+	<div class="absolute top-4 right-4">
+		<ThemeToggle />
+	</div>
 	<div class="w-full max-w-md space-y-8">
 		<!-- Brand -->
 		<div class="text-center">

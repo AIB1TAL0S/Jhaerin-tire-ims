@@ -22,6 +22,10 @@
 			} else {
 				document.documentElement.classList.remove('dark');
 			}
+			// Keep localStorage in sync
+			if (typeof localStorage !== 'undefined') {
+				localStorage.setItem('theme', currentTheme);
+			}
 		}
 	});
 
