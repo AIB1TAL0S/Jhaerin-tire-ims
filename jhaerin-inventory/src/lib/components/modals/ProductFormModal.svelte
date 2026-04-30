@@ -4,16 +4,17 @@
 	import { productSchema } from '$lib/schemas/product';
 	import type { SuperValidated, Infer } from 'sveltekit-superforms';
 	import type { ProductSchema } from '$lib/schemas/product';
-	import type { Product } from '$lib/server/db/schema';
+	import type { Product, DeliveryProvider } from '$lib/server/db/schema';
 
 	interface Props {
 		open: boolean;
 		formData: SuperValidated<Infer<ProductSchema>>;
+		providers: DeliveryProvider[];
 		editProduct?: Product | null;
 		onclose: () => void;
 	}
 
-	let { open = $bindable(), formData, editProduct = null, onclose }: Props = $props();
+	let { open = $bindable(), formData, providers, editProduct = null, onclose }: Props = $props();
 
 	const isEdit = $derived(editProduct !== null);
 
@@ -183,13 +184,17 @@
 			<!-- Delivery provider -->
 			<div class="space-y-1.5">
 				<label for="p-provider" class="text-foreground block text-sm font-medium">Delivery provider</label>
-				<input
-					id="p-provider" name="deliveryProvider" type="text"
+				<select
+					id="p-provider" name="deliveryProvider"
 					bind:value={$form.deliveryProvider}
 					aria-invalid={$errors.deliveryProvider ? 'true' : undefined}
-					class="border-input bg-background text-foreground placeholder:text-muted-foreground focus:ring-ring w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none"
-					placeholder="Provider name"
-				/>
+					class="border-input bg-background text-foreground focus:ring-ring w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none"
+				>
+					<option value="">Select provider…</option>
+					{#each providers as p (p.id)}
+						<option value={p.name}>{p.name}</option>
+					{/each}
+				</select>
 				{#if $errors.deliveryProvider}<p class="text-destructive text-xs" role="alert">{$errors.deliveryProvider}</p>{/if}
 			</div>
 

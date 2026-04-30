@@ -249,6 +249,7 @@
 <ProductFormModal
 	bind:open={createModalOpen}
 	formData={data.form}
+	providers={data.providers}
 	onclose={() => (createModalOpen = false)}
 />
 
@@ -256,6 +257,7 @@
 	<ProductFormModal
 		bind:open={editModalOpen}
 		formData={data.form}
+		providers={data.providers}
 		editProduct={selectedProduct}
 		onclose={() => { editModalOpen = false; selectedProduct = null; }}
 	/>

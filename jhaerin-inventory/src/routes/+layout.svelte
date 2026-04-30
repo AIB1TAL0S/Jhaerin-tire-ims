@@ -8,6 +8,37 @@
 
 	const isAuth = $derived(!data.user);
 
+	// ── Theme ────────────────────────────────────────────────────────────────
+	let currentTheme = $state(data.theme ?? 'dark');
+
+	$effect(() => {
+		currentTheme = data.theme ?? 'dark';
+	});
+
+	$effect(() => {
+		if (typeof document !== 'undefined') {
+			if (currentTheme === 'dark') {
+				document.documentElement.classList.add('dark');
+			} else {
+				document.documentElement.classList.remove('dark');
+			}
+		}
+	});
+
+	async function toggleTheme() {
+		const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+		currentTheme = newTheme;
+
+		// Persist to settings
+		const formData = new FormData();
+		formData.set('globalLowStockThreshold', '5');
+		formData.set('deadStockDays', '90');
+		formData.set('theme', newTheme);
+		formData.set('dateFormat', 'MM/DD/YYYY');
+		formData.set('defaultReportDateRange', '30d');
+		await fetch('/settings?/updateSettings', { method: 'POST', body: formData }).catch(() => {});
+	}
+
 	// ── Notification modal ───────────────────────────────────────────────────
 	let notifOpen = $state(false);
 	let localNotifications = $state<typeof data.notifications>([]);
@@ -119,8 +150,29 @@
 				<span class="text-foreground text-sm font-semibold lg:hidden">Jhaerin Tire Supply</span>
 				<div class="hidden lg:block"></div>
 
-				<!-- Right side: notification bell -->
-				<div class="flex items-center gap-3">
+				<!-- Right side: theme toggle + notification bell -->
+				<div class="flex items-center gap-2">
+					<!-- Theme toggle -->
+					<button
+						type="button"
+						onclick={toggleTheme}
+						class="text-muted-foreground hover:text-foreground rounded-md p-1.5 transition-colors"
+						aria-label="Toggle {currentTheme === 'dark' ? 'light' : 'dark'} mode"
+					>
+						{#if currentTheme === 'dark'}
+							<!-- Sun icon -->
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+								<circle cx="12" cy="12" r="5" />
+								<path stroke-linecap="round" stroke-linejoin="round" d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+							</svg>
+						{:else}
+							<!-- Moon icon -->
+							<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+							</svg>
+						{/if}
+					</button>
+
 					{#if data.user}
 						<button
 							type="button"

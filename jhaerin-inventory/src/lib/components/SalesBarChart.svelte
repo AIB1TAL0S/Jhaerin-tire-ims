@@ -1,5 +1,8 @@
 <script lang="ts">
-	import { Chart, Bars, Axis } from 'layerchart';
+	import * as Chart from '$lib/components/ui/chart/index.js';
+	import { BarChart } from 'layerchart';
+	import { scaleBand } from 'd3-scale';
+	import { browser } from '$app/environment';
 	import type { ChartDataPoint } from '$lib/server/models/sales';
 
 	interface Props {
@@ -15,10 +18,16 @@
 		{ value: 'weekly', label: 'Weekly' },
 		{ value: 'monthly', label: 'Monthly' }
 	];
+
+	const chartConfig = {
+		value: {
+			label: 'Units Sold',
+			color: 'var(--chart-1)'
+		}
+	} satisfies Chart.ChartConfig;
 </script>
 
 <div class="space-y-3">
-	<!-- Granularity toggle -->
 	<div class="flex items-center justify-between">
 		<h3 class="text-foreground text-sm font-semibold">Sales Volume</h3>
 		<div class="bg-muted flex rounded-lg p-0.5">
@@ -44,17 +53,26 @@
 			No sales data for this period.
 		</div>
 	{:else}
-		<div class="h-48 w-full">
-			<Chart
-				{data}
-				x="label"
-				y="value"
-				padding={{ top: 8, bottom: 32, left: 40, right: 8 }}
-			>
-				<Axis placement="bottom" />
-				<Axis placement="left" />
-				<Bars class="fill-primary/80 hover:fill-primary" radius={2} />
-			</Chart>
-		</div>
+		{#if browser}
+			<Chart.Container config={chartConfig} class="h-48 w-full">
+				<BarChart
+					{data}
+					x="label"
+					xScale={scaleBand().padding(0.2)}
+					axis="x"
+					series={[{ key: 'value', label: 'Units Sold', color: chartConfig.value.color }]}
+					props={{
+						bars: { stroke: 'none', rounded: 'all', radius: 4 },
+						xAxis: { format: (d: string) => d.length > 8 ? d.slice(0, 8) : d }
+					}}
+				>
+					{#snippet tooltip()}
+						<Chart.Tooltip indicator="dashed" />
+					{/snippet}
+				</BarChart>
+			</Chart.Container>
+		{:else}
+			<div class="bg-muted h-48 w-full animate-pulse rounded-lg"></div>
+		{/if}
 	{/if}
 </div>

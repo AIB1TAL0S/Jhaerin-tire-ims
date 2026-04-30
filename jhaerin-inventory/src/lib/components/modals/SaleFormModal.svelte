@@ -2,6 +2,7 @@
 	import { superForm } from 'sveltekit-superforms';
 	import { zod4Client as zodClient } from 'sveltekit-superforms/adapters';
 	import { saleSchema } from '$lib/schemas/sale';
+	import ProductSearchSelect from '$lib/components/ProductSearchSelect.svelte';
 	import type { SuperValidated, Infer } from 'sveltekit-superforms';
 	import type { SaleSchema } from '$lib/schemas/sale';
 	import type { Product } from '$lib/server/db/schema';
@@ -110,13 +111,14 @@
 			<!-- Product -->
 			<div class="space-y-1.5">
 				<label for="sale-product" class="text-foreground block text-sm font-medium">Product</label>
-				<select id="sale-product" name="productId" bind:value={$form.productId} aria-invalid={$errors.productId ? 'true' : undefined}
-					class="border-input bg-background text-foreground focus:ring-ring w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none">
-					<option value="">Select a product…</option>
-					{#each products as p (p.id)}
-						<option value={p.id}>{p.brand} {p.size} — {p.pattern} (stock: {p.quantity})</option>
-					{/each}
-				</select>
+				<ProductSearchSelect
+					id="sale-product"
+					name="productId"
+					{products}
+					bind:value={$form.productId}
+					ariaInvalid={!!$errors.productId}
+					placeholder="Search product…"
+				/>
 				{#if $errors.productId}<p class="text-destructive text-xs" role="alert">{$errors.productId}</p>{/if}
 			</div>
 

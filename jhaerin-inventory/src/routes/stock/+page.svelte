@@ -31,6 +31,67 @@
 	let selectedIn = $state<StockIn | null>(null);
 	let selectedOut = $state<StockOut | null>(null);
 
+	// ── Search & date filters ─────────────────────────────────────────────────
+	let searchQuery = $state('');
+	let fromFilter = $state($page.url.searchParams.get('from') ?? '');
+	let toFilter = $state($page.url.searchParams.get('to') ?? '');
+
+	function applyDateFilter() {
+		const url = new URL($page.url);
+		if (fromFilter) url.searchParams.set('from', fromFilter);
+		else url.searchParams.delete('from');
+		if (toFilter) url.searchParams.set('to', toFilter);
+		else url.searchParams.delete('to');
+		url.searchParams.delete('page');
+		goto(url.toString(), { replaceState: true });
+	}
+
+	function clearFilters() {
+		searchQuery = '';
+		fromFilter = '';
+		toFilter = '';
+		const url = new URL($page.url);
+		url.searchParams.delete('from');
+		url.searchParams.delete('to');
+		url.searchParams.delete('page');
+		goto(url.toString(), { replaceState: true });
+	}
+
+	const hasFilters = $derived(searchQuery !== '' || fromFilter !== '' || toFilter !== '');
+
+	// Client-side search filtering
+	const filteredStockIn = $derived(
+		searchQuery.trim() === ''
+			? data.stockIn
+			: data.stockIn.filter((r) => {
+					const p = data.products.find((x) => x.id === r.productId);
+					if (!p) return false;
+					const q = searchQuery.toLowerCase();
+					return (
+						p.brand.toLowerCase().includes(q) ||
+						p.size.toLowerCase().includes(q) ||
+						p.pattern.toLowerCase().includes(q) ||
+						r.deliveryProvider.toLowerCase().includes(q)
+					);
+				})
+	);
+
+	const filteredStockOut = $derived(
+		searchQuery.trim() === ''
+			? data.stockOut
+			: data.stockOut.filter((r) => {
+					const p = data.products.find((x) => x.id === r.productId);
+					if (!p) return false;
+					const q = searchQuery.toLowerCase();
+					return (
+						p.brand.toLowerCase().includes(q) ||
+						p.size.toLowerCase().includes(q) ||
+						p.pattern.toLowerCase().includes(q) ||
+						r.reason.toLowerCase().includes(q)
+					);
+				})
+	);
+
 	// ── Delete helpers ───────────────────────────────────────────────────────
 	async function deleteRecord(action: string, recordId: string) {
 		const formData = new FormData();
@@ -95,7 +156,7 @@
 				aria-current={activeTab === 'in' ? 'page' : undefined}
 			>
 				Stock-In
-				<span class="bg-muted text-muted-foreground ml-2 rounded-full px-2 py-0.5 text-xs">{data.stockIn.length}</span>
+				<span class="bg-muted text-muted-foreground ml-2 rounded-full px-2 py-0.5 text-xs">{filteredStockIn.length}</span>
 			</button>
 			<button
 				type="button"
@@ -106,9 +167,46 @@
 				aria-current={activeTab === 'out' ? 'page' : undefined}
 			>
 				Stock-Out
-				<span class="bg-muted text-muted-foreground ml-2 rounded-full px-2 py-0.5 text-xs">{data.stockOut.length}</span>
+				<span class="bg-muted text-muted-foreground ml-2 rounded-full px-2 py-0.5 text-xs">{filteredStockOut.length}</span>
 			</button>
 		</nav>
+	</div>
+
+	<!-- Filter bar -->
+	<div class="flex flex-wrap items-end gap-3">
+		<!-- Search -->
+		<div class="relative min-w-56 flex-1">
+			<svg class="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+				<circle cx="11" cy="11" r="8" /><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35" />
+			</svg>
+			<input
+				type="search"
+				bind:value={searchQuery}
+				placeholder={activeTab === 'in' ? 'Search product, provider…' : 'Search product, reason…'}
+				class="border-input bg-background text-foreground placeholder:text-muted-foreground focus:ring-ring w-full rounded-lg border py-2 pr-4 pl-9 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none"
+				aria-label="Search records"
+			/>
+		</div>
+
+		<!-- Date from -->
+		<div class="space-y-1">
+			<label for="stock-from" class="text-foreground block text-xs font-medium">From</label>
+			<input id="stock-from" type="date" bind:value={fromFilter} onchange={applyDateFilter}
+				class="border-input bg-background text-foreground focus:ring-ring rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none" />
+		</div>
+
+		<!-- Date to -->
+		<div class="space-y-1">
+			<label for="stock-to" class="text-foreground block text-xs font-medium">To</label>
+			<input id="stock-to" type="date" bind:value={toFilter} onchange={applyDateFilter}
+				class="border-input bg-background text-foreground focus:ring-ring rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none" />
+		</div>
+
+		{#if hasFilters}
+			<button type="button" onclick={clearFilters} class="text-muted-foreground hover:text-foreground text-sm transition-colors">
+				Clear filters
+			</button>
+		{/if}
 	</div>
 
 	<!-- Stock-In table -->
@@ -126,7 +224,7 @@
 						</tr>
 					</thead>
 					<tbody class="divide-border divide-y">
-						{#each data.stockIn as record (record.id)}
+						{#each filteredStockIn as record (record.id)}
 							<tr class="hover:bg-muted/40 transition-colors">
 								<td class="text-foreground px-4 py-3">{productName(record.productId)}</td>
 								<td class="text-foreground px-4 py-3 text-right tabular-nums font-medium">+{record.quantity}</td>
@@ -146,7 +244,11 @@
 								</td>
 							</tr>
 						{:else}
-							<tr><td colspan="5" class="text-muted-foreground px-4 py-12 text-center text-sm">No Stock-In records yet.</td></tr>
+							<tr>
+								<td colspan="5" class="text-muted-foreground px-4 py-12 text-center text-sm">
+									{hasFilters ? 'No Stock-In records match your filters.' : 'No Stock-In records yet.'}
+								</td>
+							</tr>
 						{/each}
 					</tbody>
 				</table>
@@ -178,7 +280,7 @@
 						</tr>
 					</thead>
 					<tbody class="divide-border divide-y">
-						{#each data.stockOut as record (record.id)}
+						{#each filteredStockOut as record (record.id)}
 							<tr class="hover:bg-muted/40 transition-colors">
 								<td class="text-foreground px-4 py-3">{productName(record.productId)}</td>
 								<td class="text-destructive px-4 py-3 text-right tabular-nums font-medium">−{record.quantity}</td>
@@ -198,7 +300,11 @@
 								</td>
 							</tr>
 						{:else}
-							<tr><td colspan="5" class="text-muted-foreground px-4 py-12 text-center text-sm">No Stock-Out records yet.</td></tr>
+							<tr>
+								<td colspan="5" class="text-muted-foreground px-4 py-12 text-center text-sm">
+									{hasFilters ? 'No Stock-Out records match your filters.' : 'No Stock-Out records yet.'}
+								</td>
+							</tr>
 						{/each}
 					</tbody>
 				</table>
@@ -217,11 +323,11 @@
 </div>
 
 <!-- Modals -->
-<StockInFormModal bind:open={createInOpen} formData={data.stockInForm} products={data.products} onclose={() => (createInOpen = false)} />
+<StockInFormModal bind:open={createInOpen} formData={data.stockInForm} products={data.products} providers={data.providers} onclose={() => (createInOpen = false)} />
 <StockOutFormModal bind:open={createOutOpen} formData={data.stockOutForm} products={data.products} onclose={() => (createOutOpen = false)} />
 
 {#if selectedIn}
-	<StockInFormModal bind:open={editInOpen} formData={data.stockInForm} products={data.products} editRecord={selectedIn} onclose={() => { editInOpen = false; selectedIn = null; }} />
+	<StockInFormModal bind:open={editInOpen} formData={data.stockInForm} products={data.products} providers={data.providers} editRecord={selectedIn} onclose={() => { editInOpen = false; selectedIn = null; }} />
 {/if}
 {#if selectedOut}
 	<StockOutFormModal bind:open={editOutOpen} formData={data.stockOutForm} products={data.products} editRecord={selectedOut} onclose={() => { editOutOpen = false; selectedOut = null; }} />

@@ -3,6 +3,7 @@ import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 as zod } from 'sveltekit-superforms/adapters';
 import { productSchema } from '$lib/schemas/product';
 import { getProducts } from '$lib/server/models/inventory';
+import { getDeliveryProviders } from '$lib/server/models/settings';
 import {
 	createProduct,
 	updateProductController,
@@ -18,13 +19,15 @@ export const load: PageServerLoad = async ({ url }) => {
 	const limit = 25;
 	const offset = (page - 1) * limit;
 
-	const [productList, form] = await Promise.all([
+	const [productList, providers, form] = await Promise.all([
 		getProducts({ search, deliveryProvider, lowStockOnly, limit, offset }),
+		getDeliveryProviders(),
 		superValidate(zod(productSchema))
 	]);
 
 	return {
 		products: productList,
+		providers,
 		form,
 		page,
 		search: search ?? '',

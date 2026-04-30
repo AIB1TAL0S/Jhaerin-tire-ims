@@ -2,7 +2,6 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import SalesBarChart from '$lib/components/SalesBarChart.svelte';
-	import ReportExportModal from '$lib/components/modals/ReportExportModal.svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -10,6 +9,11 @@
 	// ── Filters ──────────────────────────────────────────────────────────────
 	let fromFilter = $state(data.from);
 	let toFilter = $state(data.to);
+
+	$effect(() => {
+		fromFilter = data.from;
+		toFilter = data.to;
+	});
 
 	function applyFilters() {
 		const url = new URL($page.url);
@@ -26,8 +30,69 @@
 		goto(url.toString(), { replaceState: true });
 	}
 
-	// ── Export modal ─────────────────────────────────────────────────────────
-	let exportOpen = $state(false);
+	// ── Excel export ─────────────────────────────────────────────────────────
+	let exporting = $state(false);
+
+	async function exportToExcel() {
+		exporting = true;
+		try {
+			const XLSX = await import('xlsx');
+
+			const wb = XLSX.utils.book_new();
+
+			// Sheet 1: Revenue & Profit by Period
+			const periodRows = data.periodSummary.map((r) => ({
+				Period: r.period,
+				Revenue: r.totalRevenue,
+				Cost: r.totalCost,
+				'Gross Profit': r.totalGrossProfit,
+				'Margin %': r.profitMarginPercent.toFixed(2) + '%'
+			}));
+			XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(periodRows), 'Revenue & Profit');
+
+			// Sheet 2: Top Selling Products
+			const topRows = data.topSelling.map((p, i) => ({
+				Rank: i + 1,
+				Brand: p.brand,
+				Size: p.size,
+				Pattern: p.pattern,
+				'Qty Sold': p.totalQuantitySold,
+				Revenue: p.totalRevenue
+			}));
+			XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(topRows), 'Top Selling');
+
+			// Sheet 3: Least Selling Products
+			const leastRows = data.leastSelling.map((p, i) => ({
+				Rank: i + 1,
+				Brand: p.brand,
+				Size: p.size,
+				Pattern: p.pattern,
+				'Qty Sold': p.totalQuantitySold,
+				Revenue: p.totalRevenue
+			}));
+			XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(leastRows), 'Least Selling');
+
+			// Sheet 4: Inventory Value
+			const invRows = data.inventoryValue.items.map((item) => ({
+				Brand: item.brand,
+				Size: item.size,
+				Pattern: item.pattern,
+				Quantity: item.quantity,
+				'Cost Price': item.costPrice,
+				'Inventory Value': item.inventoryValue
+			}));
+			invRows.push({ Brand: 'TOTAL', Size: '', Pattern: '', Quantity: 0, 'Cost Price': 0, 'Inventory Value': data.inventoryValue.totalValue });
+			XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(invRows), 'Inventory Value');
+
+			// Download
+			const filename = `JTIMS-Report-${data.from}-to-${data.to}.xlsx`;
+			XLSX.writeFile(wb, filename);
+		} catch (err) {
+			console.error('Export failed:', err);
+		} finally {
+			exporting = false;
+		}
+	}
 
 	// ── Helpers ──────────────────────────────────────────────────────────────
 	function formatCurrency(v: number) {
@@ -73,10 +138,15 @@
 			</div>
 
 			<!-- Export button -->
-			<button type="button" onclick={() => (exportOpen = true)}
-				class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors">
-				<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-				Export
+			<button type="button" onclick={exportToExcel} disabled={exporting}
+				class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-60">
+				{#if exporting}
+					<svg class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" aria-hidden="true"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+					Exporting…
+				{:else}
+					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+					Export Excel
+				{/if}
 			</button>
 
 			<!-- Print button -->
@@ -250,5 +320,4 @@
 	</div>
 </div>
 
-<!-- Export modal -->
-<ReportExportModal bind:open={exportOpen} from={data.from} to={data.to} onclose={() => (exportOpen = false)} />
+<!-- No modal needed — export is handled client-side -->

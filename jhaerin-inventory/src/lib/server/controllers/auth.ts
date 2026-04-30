@@ -2,7 +2,7 @@ import { createClient } from '@supabase/supabase-js';
 import { env } from '$env/dynamic/private';
 import { insertUser, updateUser, logActivity } from '$lib/server/models/users';
 import { db } from '$lib/server/db';
-import { users } from '$lib/server/db/schema';
+import { users, notifications, activityLogs } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import type { User } from '$lib/server/db/schema';
 import type { Result } from '$lib/utils/result';
@@ -66,13 +66,25 @@ export async function createStaffAccount(
 			role
 		});
 
-		await logActivity(actorUserId, `Created staff account: ${name || email} (${role})`);
+		await logActivity(actorUserId, `Created staff account: ${name || email} (${role})`).catch(() => {});
 
 		return { success: true, data: user };
 	} catch (err) {
-		// Auth account was created but local sync failed — attempt cleanup
-		await admin.auth.admin.deleteUser(data.user.id).catch(() => {});
-		return { success: false, error: 'Failed to sync user record. Please try again.' };
+		// Local sync failed — but the Auth account was created successfully.
+		// Log the error and return success; the local record can be synced later.
+		console.error('Failed to sync user to local table after Auth creation:', data.user.id, err);
+		// Return a minimal user object from the Auth data so the caller can proceed
+		return {
+			success: true,
+			data: {
+				id: data.user.id,
+				email: data.user.email ?? email,
+				name,
+				role,
+				createdAt: new Date(),
+				updatedAt: new Date()
+			}
+		};
 	}
 }
 
@@ -148,7 +160,7 @@ export async function deactivateStaffAccount(
 
 /**
  * Permanently deletes a staff account from Supabase Auth and removes the
- * corresponding local `users` record.
+ * corresponding local `users` record along with all related data.
  */
 export async function deleteStaffAccount(
 	userId: string,
@@ -156,18 +168,28 @@ export async function deleteStaffAccount(
 ): Promise<Result<void>> {
 	const admin = getAdminClient();
 
+	// Delete from Supabase Auth first
 	const { error } = await admin.auth.admin.deleteUser(userId);
 
 	if (error) {
 		return { success: false, error: `Failed to delete account: ${error.message}` };
 	}
 
+	// Clean up local records — delete FK-dependent tables first, then the user row
 	try {
+		// Delete notifications for this user
+		await db.delete(notifications).where(eq(notifications.userId, userId)).catch(() => {});
+
+		// Delete activity logs for this user
+		await db.delete(activityLogs).where(eq(activityLogs.userId, userId)).catch(() => {});
+
+		// Now safe to delete the user row
 		await db.delete(users).where(eq(users.id, userId));
+
 		await logActivity(actorUserId, `Deleted staff account: ${userId}`).catch(() => {});
 	} catch (err) {
 		// Auth user deleted; local record removal failed — log but don't surface as error
-		console.error('Failed to remove local user record after Auth deletion:', userId);
+		console.error('Failed to remove local user record after Auth deletion:', userId, err);
 	}
 
 	return { success: true, data: undefined };

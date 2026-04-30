@@ -1,5 +1,8 @@
 <script lang="ts">
-	import { Chart, Spline, Axis } from 'layerchart';
+	import * as Chart from '$lib/components/ui/chart/index.js';
+	import { LineChart } from 'layerchart';
+	import { curveNatural } from 'd3-shape';
+	import { browser } from '$app/environment';
 	import type { TrendDataPoint } from '$lib/server/models/sales';
 
 	interface Props {
@@ -8,53 +11,51 @@
 
 	let { data }: Props = $props();
 
-	// LayerChart needs flat data with a single y key — create two series
-	const revenueData = $derived(data.map((d) => ({ label: d.label, value: d.revenue })));
-	const profitData = $derived(data.map((d) => ({ label: d.label, value: d.grossProfit })));
+	// LineChart needs a single y key — create two separate series datasets
+	const revenueData = $derived(data.map((d) => ({ label: d.label, revenue: d.revenue, grossProfit: d.grossProfit })));
+
+	const chartConfig = {
+		revenue: {
+			label: 'Revenue',
+			color: 'var(--chart-1)'
+		},
+		grossProfit: {
+			label: 'Gross Profit',
+			color: 'var(--chart-2)'
+		}
+	} satisfies Chart.ChartConfig;
 </script>
 
 <div class="space-y-3">
-	<div class="flex items-center justify-between">
-		<h3 class="text-foreground text-sm font-semibold">Revenue & Gross Profit</h3>
-		<div class="flex items-center gap-4 text-xs">
-			<span class="flex items-center gap-1.5">
-				<span class="bg-primary h-2 w-4 rounded-full"></span>
-				<span class="text-muted-foreground">Revenue</span>
-			</span>
-			<span class="flex items-center gap-1.5">
-				<span class="h-2 w-4 rounded-full bg-green-500"></span>
-				<span class="text-muted-foreground">Gross Profit</span>
-			</span>
-		</div>
-	</div>
+	<h3 class="text-foreground text-sm font-semibold">Revenue & Gross Profit</h3>
 
 	{#if data.length === 0}
 		<div class="text-muted-foreground flex h-48 items-center justify-center text-sm">
 			No trend data for this period.
 		</div>
 	{:else}
-		<div class="h-48 w-full">
-			<Chart
-				data={revenueData}
-				x="label"
-				y="value"
-				padding={{ top: 8, bottom: 32, left: 56, right: 8 }}
-			>
-				<Axis placement="bottom" />
-				<Axis placement="left" />
-				<Spline class="stroke-primary stroke-2" />
-			</Chart>
-		</div>
-		<!-- Profit line overlaid separately — LayerChart renders one series per Chart -->
-		<div class="h-48 w-full -mt-48 pointer-events-none opacity-70">
-			<Chart
-				data={profitData}
-				x="label"
-				y="value"
-				padding={{ top: 8, bottom: 32, left: 56, right: 8 }}
-			>
-				<Spline class="stroke-green-500 stroke-2" />
-			</Chart>
-		</div>
+		{#if browser}
+			<Chart.Container config={chartConfig} class="h-48 w-full">
+				<LineChart
+					data={revenueData}
+					x="label"
+					axis="x"
+					series={[
+						{ key: 'revenue', label: 'Revenue', color: chartConfig.revenue.color },
+						{ key: 'grossProfit', label: 'Gross Profit', color: chartConfig.grossProfit.color }
+					]}
+					props={{
+						spline: { curve: curveNatural, strokeWidth: 2 },
+						xAxis: { format: (d: string) => d.length > 8 ? d.slice(0, 8) : d }
+					}}
+				>
+					{#snippet tooltip()}
+						<Chart.Tooltip />
+					{/snippet}
+				</LineChart>
+			</Chart.Container>
+		{:else}
+			<div class="bg-muted h-48 w-full animate-pulse rounded-lg"></div>
+		{/if}
 	{/if}
 </div>

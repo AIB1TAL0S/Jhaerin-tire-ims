@@ -3,9 +3,6 @@ import { redirect, error } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
 import type { Handle } from '@sveltejs/kit';
 import { extractRole } from '$lib/server/auth/jwt';
-import { db } from '$lib/server/db';
-import { users } from '$lib/server/db/schema';
-import { sql } from 'drizzle-orm';
 
 // Routes that don't require authentication
 const PUBLIC_ROUTES = ['/login', '/register', '/reset-password'];
@@ -101,24 +98,9 @@ export const handle: Handle = async ({ event, resolve }) => {
 		event.locals.user = null;
 	}
 
-	// ── First-run detection ───────────────────────────────────────────────────
-	// If no users exist in the DB, the app hasn't been set up yet.
-	// Redirect /login → /register so the first Owner account can be created.
-	if (!event.locals.user && pathname === '/login') {
-		try {
-			const result = await db
-				.select({ count: sql<number>`count(*)::int` })
-				.from(users)
-				.limit(1);
-
-			const userCount = result[0]?.count ?? 0;
-			if (userCount === 0) {
-				redirect(302, '/register?setup=true');
-			}
-		} catch {
-			// DB not reachable — let the login page handle it gracefully
-		}
-	}
+	// ── First-run detection removed ───────────────────────────────────────────
+	// Public /register now always creates Staff accounts.
+	// The Owner account is created directly via Supabase or the /users page.
 
 	// ── Route guards ──────────────────────────────────────────────────────────
 	const isPublicRoute = PUBLIC_ROUTES.some((route) => pathname.startsWith(route));

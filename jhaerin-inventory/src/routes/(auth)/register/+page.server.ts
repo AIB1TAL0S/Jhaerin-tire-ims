@@ -1,66 +1,33 @@
-import { redirect, fail, error } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { superValidate, message } from 'sveltekit-superforms';
 import { zod4 as zod } from 'sveltekit-superforms/adapters';
 import { createServerClient } from '@supabase/ssr';
 import { env } from '$env/dynamic/private';
 import { registerSchema } from '$lib/schemas/auth';
 import { insertUser } from '$lib/server/models/users';
-import { db } from '$lib/server/db';
-import { users } from '$lib/server/db/schema';
-import { sql } from 'drizzle-orm';
 import type { PageServerLoad, Actions } from './$types';
 
-/** Returns true if no users exist yet (first-run / setup mode). */
-async function isSetupMode(): Promise<boolean> {
-	try {
-		const result = await db
-			.select({ count: sql<number>`count(*)::int` })
-			.from(users)
-			.limit(1);
-		return (result[0]?.count ?? 0) === 0;
-	} catch {
-		return false;
-	}
-}
+// Public registration — always creates Staff accounts.
+// Owners are created by the Owner via the /users page.
 
-export const load: PageServerLoad = async ({ locals, url }) => {
-	const setup = await isSetupMode();
-
-	// In setup mode: allow unauthenticated access to create the first Owner
-	if (setup) {
-		const form = await superValidate(zod(registerSchema));
-		return { form, setupMode: true };
-	}
-
-	// Normal mode: Owner-only
-	if (!locals.user) {
-		redirect(302, '/login');
-	}
-	if (locals.user.role !== 'Owner') {
-		error(403, 'Forbidden: Owner access required');
+export const load: PageServerLoad = async ({ locals }) => {
+	// Already logged in — go to dashboard
+	if (locals.user) {
+		return { form: await superValidate(zod(registerSchema)) };
 	}
 
 	const form = await superValidate(zod(registerSchema));
-	return { form, setupMode: false };
+	return { form };
 };
 
 export const actions: Actions = {
-	register: async ({ request, locals, cookies }) => {
-		const setup = await isSetupMode();
-
-		// Enforce access: either setup mode OR authenticated Owner
-		if (!setup) {
-			if (!locals.user) error(401, 'Unauthorized');
-			if (locals.user.role !== 'Owner') error(403, 'Forbidden: Owner access required');
-		}
-
+	register: async ({ request, cookies }) => {
 		const form = await superValidate(request, zod(registerSchema));
 		if (!form.valid) return fail(400, { form });
 
-		// In setup mode, force the first account to be Owner
-		const role = setup ? 'Owner' : form.data.role;
+		// Public registration always creates Staff — role field is ignored
+		const role = 'Staff' as const;
 
-		// Initialize Supabase Admin client
 		const supabaseAdmin = createServerClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
 			cookies: {
 				getAll() {
@@ -111,14 +78,9 @@ export const actions: Actions = {
 			console.error('Failed to sync new user to local users table:', data.user.id);
 		}
 
-		if (setup) {
-			// First account created — redirect to login
-			redirect(302, '/login?setup=complete');
-		}
-
 		return message(form, {
 			type: 'success',
-			text: `Account created for ${form.data.name} (${form.data.email}) with role ${role}.`
+			text: `Account created for ${form.data.name}. You can now sign in.`
 		});
 	}
 };

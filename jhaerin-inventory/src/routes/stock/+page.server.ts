@@ -6,6 +6,7 @@ import { stockOutSchema } from '$lib/schemas/stockOut';
 import { getStockIn, getStockOut, insertStockIn, updateStockIn, deleteStockIn, adjustProductQuantity } from '$lib/server/models/stock';
 import { insertStockOut, updateStockOut, deleteStockOut } from '$lib/server/models/stock';
 import { getProducts } from '$lib/server/models/inventory';
+import { getDeliveryProviders } from '$lib/server/models/settings';
 import { db } from '$lib/server/db';
 import type { PageServerLoad, Actions } from './$types';
 
@@ -17,10 +18,11 @@ export const load: PageServerLoad = async ({ url }) => {
 	const limit = 25;
 	const offset = (page - 1) * limit;
 
-	const [stockInList, stockOutList, productList, stockInForm, stockOutForm] = await Promise.all([
+	const [stockInList, stockOutList, productList, providers, stockInForm, stockOutForm] = await Promise.all([
 		getStockIn({ from, to, limit, offset }),
 		getStockOut({ from, to, limit, offset }),
 		getProducts({ limit: 200 }),
+		getDeliveryProviders(),
 		superValidate(zod(stockInSchema)),
 		superValidate(zod(stockOutSchema))
 	]);
@@ -29,6 +31,7 @@ export const load: PageServerLoad = async ({ url }) => {
 		stockIn: stockInList,
 		stockOut: stockOutList,
 		products: productList,
+		providers,
 		stockInForm,
 		stockOutForm,
 		tab,

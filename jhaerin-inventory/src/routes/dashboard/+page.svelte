@@ -81,30 +81,35 @@
 		<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
 			<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Products</p>
 			<p class="text-foreground mt-1 text-2xl font-bold tabular-nums">{data.kpis.totalProducts}</p>
+			<a href="/inventory" class="text-muted-foreground hover:text-primary mt-1 block text-xs transition-colors">View inventory →</a>
 		</div>
 
 		<!-- Aggregate stock -->
 		<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
 			<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Total Stock</p>
 			<p class="text-foreground mt-1 text-2xl font-bold tabular-nums">{data.kpis.totalStock}</p>
+			<a href="/inventory" class="text-muted-foreground hover:text-primary mt-1 block text-xs transition-colors">View inventory →</a>
 		</div>
 
 		<!-- Stock-In -->
 		<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
 			<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Stock-In</p>
 			<p class="mt-1 text-2xl font-bold tabular-nums text-green-600 dark:text-green-400">+{data.kpis.stockInSummary}</p>
+			<a href="/stock?tab=in&from={data.from}&to={data.to}" class="text-muted-foreground hover:text-primary mt-1 block text-xs transition-colors">View stock-in →</a>
 		</div>
 
 		<!-- Stock-Out -->
 		<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
 			<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Stock-Out</p>
 			<p class="text-destructive mt-1 text-2xl font-bold tabular-nums">−{data.kpis.stockOutSummary}</p>
+			<a href="/stock?tab=out&from={data.from}&to={data.to}" class="text-muted-foreground hover:text-primary mt-1 block text-xs transition-colors">View stock-out →</a>
 		</div>
 
 		<!-- Revenue -->
 		<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
 			<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Revenue</p>
 			<p class="text-foreground mt-1 text-xl font-bold tabular-nums">{formatCurrency(data.kpis.totalRevenue)}</p>
+			<a href="/sales?from={data.from}&to={data.to}" class="text-muted-foreground hover:text-primary mt-1 block text-xs transition-colors">View sales →</a>
 		</div>
 
 		<!-- Gross profit -->
@@ -113,6 +118,7 @@
 			<p class={['mt-1 text-xl font-bold tabular-nums', data.kpis.totalGrossProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'].join(' ')}>
 				{formatCurrency(data.kpis.totalGrossProfit)}
 			</p>
+			<a href="/reports?from={data.from}&to={data.to}" class="text-muted-foreground hover:text-primary mt-1 block text-xs transition-colors">View reports →</a>
 		</div>
 	</div>
 
