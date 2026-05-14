@@ -11,7 +11,7 @@
 		quantitySold: number;
 		revenue: string;
 		cost: string;
-		grossProfit: string;
+		grossProfit: string | null;
 		date: Date;
 		createdAt: Date;
 		brand: string;
@@ -20,6 +20,7 @@
 	}
 
 	let { data }: { data: PageData } = $props();
+	const canViewGrossProfit = $derived(data.canViewGrossProfit);
 
 	// ── Modal state ──────────────────────────────────────────────────────────
 	let createOpen = $state(false);
@@ -150,7 +151,9 @@
 						<th class="text-muted-foreground px-4 py-3 text-right font-medium">Qty</th>
 						<th class="text-muted-foreground px-4 py-3 text-right font-medium">Revenue</th>
 						<th class="text-muted-foreground px-4 py-3 text-right font-medium">Cost</th>
-						<th class="text-muted-foreground px-4 py-3 text-right font-medium">Gross Profit</th>
+						{#if canViewGrossProfit}
+							<th class="text-muted-foreground px-4 py-3 text-right font-medium">Gross Profit</th>
+						{/if}
 						<th class="text-muted-foreground px-4 py-3 text-left font-medium">Date</th>
 						<th class="text-muted-foreground px-4 py-3 text-right font-medium">Actions</th>
 					</tr>
@@ -162,7 +165,9 @@
 							<td class="text-foreground px-4 py-3 text-right tabular-nums">{sale.quantitySold}</td>
 							<td class="text-foreground px-4 py-3 text-right tabular-nums">{formatCurrency(sale.revenue)}</td>
 							<td class="text-muted-foreground px-4 py-3 text-right tabular-nums">{formatCurrency(sale.cost)}</td>
-							<td class={['px-4 py-3 text-right tabular-nums font-medium', profitClass(sale.grossProfit)].join(' ')}>{formatCurrency(sale.grossProfit)}</td>
+							{#if canViewGrossProfit}
+								<td class={['px-4 py-3 text-right tabular-nums font-medium', profitClass(sale.grossProfit ?? 0)].join(' ')}>{formatCurrency(sale.grossProfit ?? 0)}</td>
+							{/if}
 							<td class="text-muted-foreground px-4 py-3 whitespace-nowrap">{formatDate(sale.date)}</td>
 							<td class="px-4 py-3">
 								<div class="flex items-center justify-end gap-2">
@@ -179,7 +184,7 @@
 						</tr>
 					{:else}
 						<tr>
-							<td colspan="7" class="text-muted-foreground px-4 py-12 text-center text-sm">
+							<td colspan={canViewGrossProfit ? 7 : 6} class="text-muted-foreground px-4 py-12 text-center text-sm">
 								{hasFilters ? 'No sales match the current filters.' : 'No sales recorded yet.'}
 							</td>
 						</tr>
@@ -204,8 +209,8 @@
 </div>
 
 <!-- Modals -->
-<SaleFormModal bind:open={createOpen} formData={data.form} products={data.products} onclose={() => (createOpen = false)} />
+<SaleFormModal bind:open={createOpen} formData={data.form} products={data.products} showGrossProfit={canViewGrossProfit} onclose={() => (createOpen = false)} />
 
 {#if selectedSale}
-	<SaleFormModal bind:open={editOpen} formData={data.form} products={data.products} editSale={selectedSale} onclose={() => { editOpen = false; selectedSale = null; }} />
+	<SaleFormModal bind:open={editOpen} formData={data.form} products={data.products} editSale={selectedSale} showGrossProfit={canViewGrossProfit} onclose={() => { editOpen = false; selectedSale = null; }} />
 {/if}

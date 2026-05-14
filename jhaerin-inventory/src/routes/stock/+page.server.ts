@@ -7,6 +7,7 @@ import { getStockIn, getStockOut, insertStockIn, updateStockIn, deleteStockIn, a
 import { insertStockOut, updateStockOut, deleteStockOut } from '$lib/server/models/stock';
 import { getProducts } from '$lib/server/models/inventory';
 import { getDeliveryProviders } from '$lib/server/models/settings';
+import { createSale } from '$lib/server/controllers/sales';
 import { db } from '$lib/server/db';
 import type { PageServerLoad, Actions } from './$types';
 
@@ -51,6 +52,7 @@ export const actions: Actions = {
 					productId: form.data.productId,
 					quantity: form.data.quantity,
 					deliveryProvider: form.data.deliveryProvider,
+					salesInvoiceNumber: form.data.salesInvoiceNumber.trim() || null,
 					date: form.data.date
 				});
 				await adjustProductQuantity(tx, form.data.productId, form.data.quantity);
@@ -84,6 +86,7 @@ export const actions: Actions = {
 					productId: form.data.productId,
 					quantity: form.data.quantity,
 					deliveryProvider: form.data.deliveryProvider,
+					salesInvoiceNumber: form.data.salesInvoiceNumber.trim() || null,
 					date: form.data.date
 				});
 				if (delta !== 0) {
@@ -126,6 +129,20 @@ export const actions: Actions = {
 	createStockOut: async ({ request }) => {
 		const form = await superValidate(request, zod(stockOutSchema));
 		if (!form.valid) return fail(400, { stockOutForm: form });
+
+		if (form.data.reason.trim().toLowerCase() === 'sales') {
+			const result = await createSale({
+				productId: form.data.productId,
+				quantitySold: form.data.quantity,
+				date: form.data.date
+			});
+
+			if (!result.success) {
+				return message(form, { type: 'error', text: result.error }, { status: 422 });
+			}
+
+			return message(form, { type: 'success', text: 'Sale recorded successfully.' });
+		}
 
 		try {
 			await db.transaction(async (tx) => {

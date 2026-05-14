@@ -7,7 +7,8 @@ import { getProducts } from '$lib/server/models/inventory';
 import { createSale, updateSaleController, deleteSaleController } from '$lib/server/controllers/sales';
 import type { PageServerLoad, Actions } from './$types';
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, locals }) => {
+	const canViewGrossProfit = locals.user?.role === 'Owner';
 	const search = url.searchParams.get('search') ?? undefined;
 	const productId = url.searchParams.get('productId') ?? undefined;
 	const from = url.searchParams.get('from') ? new Date(url.searchParams.get('from')!) : undefined;
@@ -21,12 +22,16 @@ export const load: PageServerLoad = async ({ url }) => {
 		getProducts({ limit: 200 }),
 		superValidate(zod(saleSchema))
 	]);
+	const visibleSales = canViewGrossProfit
+		? salesList
+		: salesList.map((sale) => ({ ...sale, grossProfit: null }));
 
 	return {
-		sales: salesList,
+		sales: visibleSales,
 		products: productList,
 		form,
 		page,
+		canViewGrossProfit,
 		search: search ?? '',
 		productId: productId ?? '',
 		from: url.searchParams.get('from') ?? '',

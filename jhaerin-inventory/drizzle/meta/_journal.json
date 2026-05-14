@@ -15,6 +15,13 @@
       "when": 1777479559054,
       "tag": "0001_cooing_tana_nile",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1778784805370,
+      "tag": "0002_wise_phantom_reporter",
+      "breakpoints": true
     }
   ]
 }

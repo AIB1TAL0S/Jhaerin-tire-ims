@@ -14,7 +14,7 @@
 		quantitySold: number;
 		revenue: string;
 		cost: string;
-		grossProfit: string;
+		grossProfit: string | null;
 		date: Date;
 		createdAt: Date;
 		brand: string;
@@ -27,10 +27,11 @@
 		formData: SuperValidated<Infer<SaleSchema>>;
 		products: Product[];
 		editSale?: SaleRow | null;
+		showGrossProfit?: boolean;
 		onclose: () => void;
 	}
 
-	let { open = $bindable(), formData, products, editSale = null, onclose }: Props = $props();
+	let { open = $bindable(), formData, products, editSale = null, showGrossProfit = true, onclose }: Props = $props();
 
 	const isEdit = $derived(editSale !== null);
 
@@ -153,12 +154,14 @@
 						<span class="text-muted-foreground">Cost</span>
 						<span class="text-foreground tabular-nums">{formatCurrency(previewCost!)}</span>
 					</div>
-					<div class="border-border flex justify-between border-t pt-1">
-						<span class="text-foreground font-medium">Gross profit</span>
-						<span class={['tabular-nums font-semibold', Number(previewProfit) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'].join(' ')}>
-							{formatCurrency(previewProfit!)}
-						</span>
-					</div>
+					{#if showGrossProfit}
+						<div class="border-border flex justify-between border-t pt-1">
+							<span class="text-foreground font-medium">Gross profit</span>
+							<span class={['tabular-nums font-semibold', Number(previewProfit) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'].join(' ')}>
+								{formatCurrency(previewProfit!)}
+							</span>
+						</div>
+					{/if}
 				</div>
 			{/if}
 

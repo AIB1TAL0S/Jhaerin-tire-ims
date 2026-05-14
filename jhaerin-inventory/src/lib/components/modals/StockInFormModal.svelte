@@ -37,6 +37,7 @@
 			$form.productId = editRecord.productId;
 			$form.quantity = editRecord.quantity;
 			$form.deliveryProvider = editRecord.deliveryProvider;
+			$form.salesInvoiceNumber = editRecord.salesInvoiceNumber ?? '';
 			$form.date = new Date(editRecord.date);
 		} else {
 			reset();
@@ -108,14 +109,27 @@
 				{#if $errors.deliveryProvider}<p class="text-destructive text-xs" role="alert">{$errors.deliveryProvider}</p>{/if}
 			</div>
 
-			<!-- Date -->
-			<div class="space-y-1.5">
-				<label for="si-date" class="text-foreground block text-sm font-medium">Date</label>
-				<input id="si-date" name="date" type="date" value={$form.date ? new Date($form.date).toISOString().split('T')[0] : todayISO()}
-					oninput={(e) => { $form.date = new Date((e.target as HTMLInputElement).value); }}
-					aria-invalid={$errors.date ? 'true' : undefined}
-					class="border-input bg-background text-foreground focus:ring-ring w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none" />
-				{#if $errors.date}<p class="text-destructive text-xs" role="alert">{$errors.date}</p>{/if}
+			<!-- Delivery invoice receipt -->
+			<div class="border-border space-y-4 border-t pt-4">
+				<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Delivery invoice receipt</p>
+
+				<div class="space-y-1.5">
+					<label for="si-invoice" class="text-foreground block text-sm font-medium">Sales invoice number</label>
+					<input id="si-invoice" name="salesInvoiceNumber" type="text" bind:value={$form.salesInvoiceNumber} aria-invalid={$errors.salesInvoiceNumber ? 'true' : undefined}
+						class="border-input bg-background text-foreground placeholder:text-muted-foreground focus:ring-ring w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none"
+						placeholder="Enter sales invoice number" />
+					{#if $errors.salesInvoiceNumber}<p class="text-destructive text-xs" role="alert">{$errors.salesInvoiceNumber}</p>{/if}
+				</div>
+
+				<div class="space-y-1.5">
+					<label for="si-date" class="text-foreground block text-sm font-medium">Delivery date <span class="text-destructive">*</span></label>
+					<input id="si-date" name="date" type="date" value={$form.date ? new Date($form.date).toISOString().split('T')[0] : todayISO()}
+						oninput={(e) => { $form.date = new Date((e.target as HTMLInputElement).value); }}
+						aria-invalid={$errors.date ? 'true' : undefined}
+						required
+						class="border-input bg-background text-foreground focus:ring-ring w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none" />
+					{#if $errors.date}<p class="text-destructive text-xs" role="alert">{$errors.date}</p>{/if}
+				</div>
 			</div>
 
 			<div class="flex justify-end gap-3 pt-2">

@@ -45,6 +45,10 @@
 	function todayISO() {
 		return new Date().toISOString().split('T')[0];
 	}
+
+	function markAsSale() {
+		$form.reason = 'Sales';
+	}
 </script>
 
 {#if open}
@@ -96,7 +100,21 @@
 
 			<!-- Reason -->
 			<div class="space-y-1.5">
-				<label for="so-reason" class="text-foreground block text-sm font-medium">Reason</label>
+				<div class="flex items-center justify-between gap-3">
+					<label for="so-reason" class="text-foreground block text-sm font-medium">Reason</label>
+					{#if !isEdit}
+						<button
+							type="button"
+							onclick={markAsSale}
+							aria-pressed={$form.reason === 'Sales'}
+							class={['rounded-md border px-2 py-1 text-xs font-medium transition-colors', $form.reason === 'Sales'
+								? 'border-primary bg-primary text-primary-foreground'
+								: 'border-border text-foreground hover:bg-muted'].join(' ')}
+						>
+							Sales
+						</button>
+					{/if}
+				</div>
 				<input id="so-reason" name="reason" type="text" bind:value={$form.reason} aria-invalid={$errors.reason ? 'true' : undefined}
 					class="border-input bg-background text-foreground placeholder:text-muted-foreground focus:ring-ring w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none"
 					placeholder="e.g. Damaged, Returned, Transferred" />
@@ -109,6 +127,7 @@
 				<input id="so-date" name="date" type="date" value={$form.date ? new Date($form.date).toISOString().split('T')[0] : todayISO()}
 					oninput={(e) => { $form.date = new Date((e.target as HTMLInputElement).value); }}
 					aria-invalid={$errors.date ? 'true' : undefined}
+					required
 					class="border-input bg-background text-foreground focus:ring-ring w-full rounded-lg border px-3 py-2 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none" />
 				{#if $errors.date}<p class="text-destructive text-xs" role="alert">{$errors.date}</p>{/if}
 			</div>
@@ -116,7 +135,7 @@
 			<div class="flex justify-end gap-3 pt-2">
 				<button type="button" onclick={() => { open = false; onclose(); }} class="border-border text-foreground hover:bg-muted rounded-lg border px-4 py-2 text-sm font-medium transition-colors">Cancel</button>
 				<button type="submit" disabled={$submitting} class="bg-primary text-primary-foreground hover:bg-primary/90 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-60">
-					{$submitting ? 'Saving…' : isEdit ? 'Save changes' : 'Record'}
+					{$submitting ? 'Saving…' : !isEdit && $form.reason === 'Sales' ? 'Record sale' : isEdit ? 'Save changes' : 'Record'}
 				</button>
 			</div>
 		</form>

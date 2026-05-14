@@ -40,49 +40,88 @@
 
 			const wb = XLSX.utils.book_new();
 
-			// Sheet 1: Revenue & Profit by Period
-			const periodRows = data.periodSummary.map((r) => ({
-				Period: r.period,
-				Revenue: r.totalRevenue,
-				Cost: r.totalCost,
-				'Gross Profit': r.totalGrossProfit,
-				'Margin %': r.profitMarginPercent.toFixed(2) + '%'
+			const salesRows = data.salesExportRows.map((r) => ({
+				Brand: r.brand,
+				Size: r.size,
+				Pattern: r.pattern,
+				Unit: r.unit,
+				Price: r.price,
+				'Total Amount': r.totalAmount
 			}));
-			XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(periodRows), 'Revenue & Profit');
 
-			// Sheet 2: Top Selling Products
-			const topRows = data.topSelling.map((p, i) => ({
-				Rank: i + 1,
-				Brand: p.brand,
-				Size: p.size,
-				Pattern: p.pattern,
-				'Qty Sold': p.totalQuantitySold,
-				Revenue: p.totalRevenue
-			}));
-			XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(topRows), 'Top Selling');
+			const summaryRows: {
+				Brand: string;
+				Size: string;
+				Pattern: string;
+				Unit: number;
+				Price: number;
+				'Total Amount': number;
+			}[] = [];
 
-			// Sheet 3: Least Selling Products
-			const leastRows = data.leastSelling.map((p, i) => ({
-				Rank: i + 1,
-				Brand: p.brand,
-				Size: p.size,
-				Pattern: p.pattern,
-				'Qty Sold': p.totalQuantitySold,
-				Revenue: p.totalRevenue
-			}));
-			XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(leastRows), 'Least Selling');
+			for (const row of salesRows) {
+				const existing = summaryRows.find((summaryRow) =>
+					summaryRow.Brand === row.Brand &&
+					summaryRow.Size === row.Size &&
+					summaryRow.Pattern === row.Pattern &&
+					summaryRow.Price === row.Price
+				);
+				if (existing) {
+					existing.Unit += row.Unit;
+					existing['Total Amount'] += row['Total Amount'];
+				} else {
+					summaryRows.push({ ...row });
+				}
+			}
 
-			// Sheet 4: Inventory Value
-			const invRows = data.inventoryValue.items.map((item) => ({
-				Brand: item.brand,
-				Size: item.size,
-				Pattern: item.pattern,
-				Quantity: item.quantity,
-				'Cost Price': item.costPrice,
-				'Inventory Value': item.inventoryValue
-			}));
-			invRows.push({ Brand: 'TOTAL', Size: '', Pattern: '', Quantity: 0, 'Cost Price': 0, 'Inventory Value': data.inventoryValue.totalValue });
-			XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(invRows), 'Inventory Value');
+			summaryRows.sort((a, b) =>
+				a.Brand.localeCompare(b.Brand) ||
+				a.Size.localeCompare(b.Size) ||
+				a.Pattern.localeCompare(b.Pattern)
+			);
+			const totalUnits = salesRows.reduce((sum, row) => sum + row.Unit, 0);
+			const totalAmount = salesRows.reduce((sum, row) => sum + row['Total Amount'], 0);
+
+			const summarySheet = XLSX.utils.aoa_to_sheet([
+				['Jhaerin Tire Supply Sales Report Summary'],
+				['From', data.from],
+				['To', data.to],
+				['Generated', new Date().toLocaleString()],
+				['Total Records', salesRows.length],
+				['Total Units', totalUnits],
+				['Total Amount', totalAmount],
+				[],
+				['Brand', 'Size', 'Pattern', 'Unit', 'Price', 'Total Amount'],
+				...summaryRows.map((row) => [
+					row.Brand,
+					row.Size,
+					row.Pattern,
+					row.Unit,
+					row.Price,
+					row['Total Amount']
+				])
+			]);
+			summarySheet['!cols'] = [
+				{ wch: 18 },
+				{ wch: 16 },
+				{ wch: 18 },
+				{ wch: 10 },
+				{ wch: 12 },
+				{ wch: 16 }
+			];
+			XLSX.utils.book_append_sheet(wb, summarySheet, 'Summary');
+
+			const salesSheet = XLSX.utils.json_to_sheet(salesRows, {
+				header: ['Brand', 'Size', 'Pattern', 'Unit', 'Price', 'Total Amount']
+			});
+			salesSheet['!cols'] = [
+				{ wch: 18 },
+				{ wch: 16 },
+				{ wch: 18 },
+				{ wch: 10 },
+				{ wch: 12 },
+				{ wch: 16 }
+			];
+			XLSX.utils.book_append_sheet(wb, salesSheet, 'Sales Records');
 
 			// Download
 			const filename = `JTIMS-Report-${data.from}-to-${data.to}.xlsx`;
@@ -256,7 +295,7 @@
 						</tr>
 					</thead>
 					<tbody class="divide-border divide-y">
-						{#each data.leastSelling as item, i (item.productId)}
+						{#each data.leastSelling as item (item.productId)}
 							<tr class="hover:bg-muted/40 transition-colors">
 								<td class="px-4 py-3">
 									<span class="text-foreground font-medium">{item.brand} {item.size}</span>

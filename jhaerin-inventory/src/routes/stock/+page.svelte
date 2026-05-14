@@ -71,7 +71,8 @@
 						p.brand.toLowerCase().includes(q) ||
 						p.size.toLowerCase().includes(q) ||
 						p.pattern.toLowerCase().includes(q) ||
-						r.deliveryProvider.toLowerCase().includes(q)
+						r.deliveryProvider.toLowerCase().includes(q) ||
+						(r.salesInvoiceNumber?.toLowerCase().includes(q) ?? false)
 					);
 				})
 	);
@@ -182,7 +183,7 @@
 			<input
 				type="search"
 				bind:value={searchQuery}
-				placeholder={activeTab === 'in' ? 'Search product, provider…' : 'Search product, reason…'}
+				placeholder={activeTab === 'in' ? 'Search product, provider, invoice…' : 'Search product, reason…'}
 				class="border-input bg-background text-foreground placeholder:text-muted-foreground focus:ring-ring w-full rounded-lg border py-2 pr-4 pl-9 text-sm focus:ring-2 focus:ring-offset-1 focus:outline-none"
 				aria-label="Search records"
 			/>
@@ -219,7 +220,8 @@
 							<th class="text-muted-foreground px-4 py-3 text-left font-medium">Product</th>
 							<th class="text-muted-foreground px-4 py-3 text-right font-medium">Qty</th>
 							<th class="text-muted-foreground px-4 py-3 text-left font-medium">Provider</th>
-							<th class="text-muted-foreground px-4 py-3 text-left font-medium">Date</th>
+							<th class="text-muted-foreground px-4 py-3 text-left font-medium">Sales Invoice #</th>
+							<th class="text-muted-foreground px-4 py-3 text-left font-medium">Delivery Date</th>
 							<th class="text-muted-foreground px-4 py-3 text-right font-medium">Actions</th>
 						</tr>
 					</thead>
@@ -229,6 +231,7 @@
 								<td class="text-foreground px-4 py-3">{productName(record.productId)}</td>
 								<td class="text-foreground px-4 py-3 text-right tabular-nums font-medium">+{record.quantity}</td>
 								<td class="text-muted-foreground px-4 py-3">{record.deliveryProvider}</td>
+								<td class="text-muted-foreground px-4 py-3">{record.salesInvoiceNumber || '—'}</td>
 								<td class="text-muted-foreground px-4 py-3">{formatDate(record.date)}</td>
 								<td class="px-4 py-3">
 									<div class="flex items-center justify-end gap-2">
@@ -245,7 +248,7 @@
 							</tr>
 						{:else}
 							<tr>
-								<td colspan="5" class="text-muted-foreground px-4 py-12 text-center text-sm">
+								<td colspan="6" class="text-muted-foreground px-4 py-12 text-center text-sm">
 									{hasFilters ? 'No Stock-In records match your filters.' : 'No Stock-In records yet.'}
 								</td>
 							</tr>

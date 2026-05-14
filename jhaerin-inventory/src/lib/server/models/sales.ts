@@ -26,6 +26,15 @@ export interface SalesSummary {
 	totalQuantitySold: number;
 }
 
+export interface SalesExportRow {
+	brand: string;
+	size: string;
+	pattern: string;
+	unit: number;
+	price: number;
+	totalAmount: number;
+}
+
 // ─── Transaction type alias ───────────────────────────────────────────────────
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -149,6 +158,41 @@ export async function getSalesSummary(dateRange: DateRange = {}): Promise<SalesS
 	};
 }
 
+/**
+ * Returns detailed sales rows for Excel export in the selected date range.
+ */
+export async function getSalesExportRows(dateRange: DateRange = {}): Promise<SalesExportRow[]> {
+	const { from, to } = dateRange;
+
+	const conditions = [];
+	if (from) conditions.push(gte(sales.date, from));
+	if (to) conditions.push(lte(sales.date, to));
+
+	const rows = await db
+		.select({
+			brand: products.brand,
+			size: products.size,
+			pattern: products.pattern,
+			unit: sales.quantitySold,
+			price: sql<number>`${sales.revenue} / nullif(${sales.quantitySold}, 0)`,
+			totalAmount: sales.revenue,
+			date: sales.date
+		})
+		.from(sales)
+		.innerJoin(products, eq(sales.productId, products.id))
+		.where(conditions.length ? and(...conditions) : undefined)
+		.orderBy(desc(sales.date));
+
+	return rows.map((r) => ({
+		brand: r.brand,
+		size: r.size,
+		pattern: r.pattern,
+		unit: r.unit,
+		price: Number(r.price ?? 0),
+		totalAmount: Number(r.totalAmount)
+	}));
+}
+
 // ─── Dashboard aggregation ────────────────────────────────────────────────────
 
 export interface DashboardKPIs {
@@ -180,7 +224,10 @@ export interface CategoryDataPoint {
  * Returns KPI summary for the dashboard: product count, aggregate stock,
  * stock-in/out totals, revenue, and gross profit for the selected date range.
  */
-export async function getDashboardKPIs(dateRange: DateRange = {}): Promise<DashboardKPIs> {
+export async function getDashboardKPIs(
+	dateRange: DateRange = {},
+	includeSalesMetrics = true
+): Promise<DashboardKPIs> {
 	const { from, to } = dateRange;
 
 	const conditions: ReturnType<typeof gte>[] = [];
@@ -222,22 +269,29 @@ export async function getDashboardKPIs(dateRange: DateRange = {}): Promise<Dashb
 				: undefined
 		);
 
-	// Revenue and gross profit
-	const salesStats = await db
-		.select({
-			totalRevenue: sql<number>`coalesce(sum(${sales.revenue}), 0)`,
-			totalGrossProfit: sql<number>`coalesce(sum(${sales.grossProfit}), 0)`
-		})
-		.from(sales)
-		.where(conditions.length ? and(...conditions) : undefined);
+	let totalRevenue = 0;
+	let totalGrossProfit = 0;
+
+	if (includeSalesMetrics) {
+		const salesStats = await db
+			.select({
+				totalRevenue: sql<number>`coalesce(sum(${sales.revenue}), 0)`,
+				totalGrossProfit: sql<number>`coalesce(sum(${sales.grossProfit}), 0)`
+			})
+			.from(sales)
+			.where(conditions.length ? and(...conditions) : undefined);
+
+		totalRevenue = Number(salesStats[0]?.totalRevenue ?? 0);
+		totalGrossProfit = Number(salesStats[0]?.totalGrossProfit ?? 0);
+	}
 
 	return {
 		totalProducts: productStats[0]?.totalProducts ?? 0,
 		totalStock: productStats[0]?.totalStock ?? 0,
 		stockInSummary: stockInStats[0]?.total ?? 0,
 		stockOutSummary: stockOutStats[0]?.total ?? 0,
-		totalRevenue: Number(salesStats[0]?.totalRevenue ?? 0),
-		totalGrossProfit: Number(salesStats[0]?.totalGrossProfit ?? 0)
+		totalRevenue,
+		totalGrossProfit
 	};
 }
 

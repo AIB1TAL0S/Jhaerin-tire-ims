@@ -5,28 +5,53 @@ import {
 	getTopSellingProducts,
 	getLeastSellingProducts,
 	getRevenueAndProfitByPeriod,
-	getSalesChartData
+	getSalesChartData,
+	getSalesExportRows
 } from '$lib/server/models/sales';
 import { getInventoryValueReport } from '$lib/server/models/inventory';
 import type { PageServerLoad, Actions } from './$types';
 
+function parseDateInput(value: string, endOfDay = false) {
+	const [year, month, day] = value.split('-').map(Number);
+	return new Date(
+		year,
+		month - 1,
+		day,
+		endOfDay ? 23 : 0,
+		endOfDay ? 59 : 0,
+		endOfDay ? 59 : 0,
+		endOfDay ? 999 : 0
+	);
+}
+
+function formatDateInput(date: Date) {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, '0');
+	const day = String(date.getDate()).padStart(2, '0');
+	return `${year}-${month}-${day}`;
+}
+
 export const load: PageServerLoad = async ({ url }) => {
-	const from = url.searchParams.get('from')
-		? new Date(url.searchParams.get('from')!)
-		: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-	const to = url.searchParams.get('to') ? new Date(url.searchParams.get('to')!) : new Date();
+	const fromParam = url.searchParams.get('from');
+	const toParam = url.searchParams.get('to');
+	const to = toParam ? parseDateInput(toParam, true) : new Date();
+	const from = fromParam
+		? parseDateInput(fromParam)
+		: new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
+	from.setHours(0, 0, 0, 0);
 	const granularity = (url.searchParams.get('granularity') ?? 'monthly') as
 		| 'daily'
 		| 'weekly'
 		| 'monthly';
 	const dateRange = { from, to };
 
-	const [topSelling, leastSelling, inventoryValue, periodSummary, chartData] = await Promise.all([
+	const [topSelling, leastSelling, inventoryValue, periodSummary, chartData, salesExportRows] = await Promise.all([
 		getTopSellingProducts(dateRange, 10),
 		getLeastSellingProducts(dateRange, 10),
 		getInventoryValueReport(),
 		getRevenueAndProfitByPeriod(dateRange, granularity),
-		getSalesChartData(granularity, dateRange)
+		getSalesChartData(granularity, dateRange),
+		getSalesExportRows(dateRange)
 	]);
 
 	return {
@@ -35,9 +60,10 @@ export const load: PageServerLoad = async ({ url }) => {
 		inventoryValue,
 		periodSummary,
 		chartData,
+		salesExportRows,
 		granularity,
-		from: from.toISOString().split('T')[0],
-		to: to.toISOString().split('T')[0]
+		from: fromParam ?? formatDateInput(from),
+		to: toParam ?? formatDateInput(to)
 	};
 };
 
@@ -49,7 +75,7 @@ export const actions: Actions = {
 	 * Note: Full PDF generation (e.g. via Puppeteer) requires a Node.js runtime.
 	 * On Cloudflare Workers we generate a CSV and store it as a downloadable report.
 	 */
-	exportPdf: async ({ request, locals }) => {
+	exportPdf: async ({ request }) => {
 		const formData = await request.formData();
 		const from = formData.get('from')?.toString() ?? '';
 		const to = formData.get('to')?.toString() ?? '';

@@ -1,0 +1,1 @@
+ALTER TABLE "stock_in" ADD COLUMN "sales_invoice_number" text;

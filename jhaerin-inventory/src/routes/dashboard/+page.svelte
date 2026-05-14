@@ -8,6 +8,7 @@
 	import type { Product } from '$lib/server/db/schema';
 
 	let { data }: { data: PageData } = $props();
+	const canViewSalesMetrics = $derived(data.canViewSalesMetrics);
 
 	// ── Date range & granularity filters ─────────────────────────────────────
 	let fromFilter = $state('');
@@ -76,7 +77,7 @@
 	</div>
 
 	<!-- KPI cards -->
-	<div class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+	<div class={['grid grid-cols-2 gap-4 sm:grid-cols-3', canViewSalesMetrics ? 'lg:grid-cols-6' : 'lg:grid-cols-4'].join(' ')}>
 		<!-- Total products -->
 		<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
 			<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Products</p>
@@ -105,56 +106,60 @@
 			<a href="/stock?tab=out&from={data.from}&to={data.to}" class="text-muted-foreground hover:text-primary mt-1 block text-xs transition-colors">View stock-out →</a>
 		</div>
 
-		<!-- Revenue -->
-		<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
-			<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Revenue</p>
-			<p class="text-foreground mt-1 text-xl font-bold tabular-nums">{formatCurrency(data.kpis.totalRevenue)}</p>
-			<a href="/sales?from={data.from}&to={data.to}" class="text-muted-foreground hover:text-primary mt-1 block text-xs transition-colors">View sales →</a>
-		</div>
+		{#if canViewSalesMetrics}
+			<!-- Revenue -->
+			<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
+				<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Revenue</p>
+				<p class="text-foreground mt-1 text-xl font-bold tabular-nums">{formatCurrency(data.kpis.totalRevenue)}</p>
+				<a href="/sales?from={data.from}&to={data.to}" class="text-muted-foreground hover:text-primary mt-1 block text-xs transition-colors">View sales →</a>
+			</div>
 
-		<!-- Gross profit -->
-		<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
-			<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Gross Profit</p>
-			<p class={['mt-1 text-xl font-bold tabular-nums', data.kpis.totalGrossProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'].join(' ')}>
-				{formatCurrency(data.kpis.totalGrossProfit)}
-			</p>
-			<a href="/reports?from={data.from}&to={data.to}" class="text-muted-foreground hover:text-primary mt-1 block text-xs transition-colors">View reports →</a>
-		</div>
+			<!-- Gross profit -->
+			<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
+				<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Gross Profit</p>
+				<p class={['mt-1 text-xl font-bold tabular-nums', data.kpis.totalGrossProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'].join(' ')}>
+					{formatCurrency(data.kpis.totalGrossProfit)}
+				</p>
+				<a href="/reports?from={data.from}&to={data.to}" class="text-muted-foreground hover:text-primary mt-1 block text-xs transition-colors">View reports →</a>
+			</div>
+		{/if}
 	</div>
 
-	<!-- Peak / Lowest sales month -->
-	<div class="grid grid-cols-2 gap-4">
-		<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
-			<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Peak Sales Month ({new Date().getFullYear()})</p>
-			<p class="text-foreground mt-1 text-lg font-semibold">{data.peakLowest.peak}</p>
+	{#if canViewSalesMetrics}
+		<!-- Peak / Lowest sales month -->
+		<div class="grid grid-cols-2 gap-4">
+			<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
+				<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Peak Sales Month ({new Date().getFullYear()})</p>
+				<p class="text-foreground mt-1 text-lg font-semibold">{data.peakLowest.peak}</p>
+			</div>
+			<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
+				<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Lowest Sales Month ({new Date().getFullYear()})</p>
+				<p class="text-foreground mt-1 text-lg font-semibold">{data.peakLowest.lowest}</p>
+			</div>
 		</div>
-		<div class="bg-card border-border rounded-xl border p-4 shadow-sm">
-			<p class="text-muted-foreground text-xs font-medium uppercase tracking-wide">Lowest Sales Month ({new Date().getFullYear()})</p>
-			<p class="text-foreground mt-1 text-lg font-semibold">{data.peakLowest.lowest}</p>
-		</div>
-	</div>
 
-	<!-- Charts row -->
-	<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
-		<!-- Sales bar chart -->
+		<!-- Charts row -->
+		<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+			<!-- Sales bar chart -->
+			<div class="bg-card border-border rounded-xl border p-5 shadow-sm">
+				<SalesBarChart
+					data={data.chartData}
+					granularity={data.granularity}
+					onGranularityChange={changeGranularity}
+				/>
+			</div>
+
+			<!-- Revenue/profit line chart -->
+			<div class="bg-card border-border rounded-xl border p-5 shadow-sm">
+				<RevenueProfitLineChart data={data.trendData} />
+			</div>
+		</div>
+
+		<!-- Pie chart -->
 		<div class="bg-card border-border rounded-xl border p-5 shadow-sm">
-			<SalesBarChart
-				data={data.chartData}
-				granularity={data.granularity}
-				onGranularityChange={changeGranularity}
-			/>
+			<SalesByCategoryPieChart data={data.categoryData} />
 		</div>
-
-		<!-- Revenue/profit line chart -->
-		<div class="bg-card border-border rounded-xl border p-5 shadow-sm">
-			<RevenueProfitLineChart data={data.trendData} />
-		</div>
-	</div>
-
-	<!-- Pie chart -->
-	<div class="bg-card border-border rounded-xl border p-5 shadow-sm">
-		<SalesByCategoryPieChart data={data.categoryData} />
-	</div>
+	{/if}
 
 	<!-- Alerts row -->
 	<div class="grid grid-cols-1 gap-6 lg:grid-cols-2">

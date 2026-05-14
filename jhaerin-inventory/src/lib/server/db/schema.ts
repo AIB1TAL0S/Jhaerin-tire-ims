@@ -52,6 +52,7 @@ export const stockIn = pgTable('stock_in', {
   productId: uuid('product_id').notNull().references(() => products.id),
   quantity: integer('quantity').notNull(),
   deliveryProvider: text('delivery_provider').notNull(),
+  salesInvoiceNumber: text('sales_invoice_number'),
   date: timestamp('date').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull()
 }, (t) => ({
